@@ -26,16 +26,19 @@ def parse_feed(raw,source,host):
     if root.tag.split('}')[-1] not in {'rss','feed','RDF'}:
         raise ValueError('Not a news feed')
     result=[]
+    # Some feeds put RSS elements in a namespace.
+    for element in root.iter(): element.tag=element.tag.split('}')[-1]
     for item in root.findall('.//item'):
         title=clean(item.findtext('title'))
         url=clean(item.findtext('link'))
         parsed=urllib.parse.urlsplit(url)
-        if not title or parsed.scheme!='https' or not (parsed.hostname==host or (parsed.hostname or '').endswith('.'+host)) or parsed.path in {'','/'}:
+        if not title or parsed.scheme not in {'http','https'} or not (parsed.hostname==host or (parsed.hostname or '').endswith('.'+host)) or parsed.path in {'','/'}:
             continue
         try:
             date=parsedate_to_datetime(item.findtext('pubDate')).astimezone(UTC)
         except (TypeError,ValueError,AttributeError):
-            continue
+            try: date=dt.datetime.fromisoformat((item.findtext('pubDate') or item.findtext('date') or '').replace('Z','+00:00')).astimezone(UTC)
+            except (TypeError,ValueError,AttributeError): continue
         if not 0 <= (dt.datetime.now(UTC)-date).total_seconds() <= 14*86400:
             continue
         # Short RSS excerpt only, never fetch or reproduce article bodies.
@@ -56,7 +59,7 @@ def related(item,listing):
     explicit=re.search(r'(?:\$|(?:NASDAQ|NYSE|AMEX)\s*:\s*)'+re.escape(symbol)+r'\b',text,re.I)
     name=company_key(listing['name'])
     named=len(name)>=4 and re.search(r'(?<!\w)'+re.escape(name)+r'(?!\w)',text,re.I)
-    long_symbol=len(symbol)>=4 and re.search(r'(?<!\w)'+re.escape(symbol)+r'(?!\w)',title)
+    long_symbol=re.search(r'\('+re.escape(symbol)+r'\)',title)
     return bool(explicit or named or long_symbol)
 
 def fetch_feed(spec):
@@ -67,10 +70,10 @@ def fetch_feed(spec):
         with urllib.request.urlopen(request,timeout=18) as response:
             raw=response.read(3000000)
         rows=parse_feed(raw,name,host)
-        return rows,{'source':name,'state':'ok','count':len(rows),'fetchedAt':now}
+        return rows,{'source':name,'state':'ok','count':len(rows),'fetchedAt':now,'feedUrl':url}
     except Exception as exc:
         code=getattr(exc,'code',None)
-        return [],{'source':name,'state':'error','reason':f'HTTP {code}' if code else 'Feed unavailable or invalid','fetchedAt':now}
+        return [],{'source':name,'state':'error','reason':f'HTTP {code}' if code else 'Feed unavailable or invalid','fetchedAt':now,'feedUrl':url}
 
 def main():
     directory=json.loads((ROOT/'site/data/directory.json').read_text(encoding='utf-8'))

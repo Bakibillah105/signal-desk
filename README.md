@@ -2,7 +2,17 @@
 
 A static US equity research workspace for long-only decisions. Initial lens: **2–5 trading days**. Built for GitHub Pages, with no runtime dependencies, build framework, or browser API keys.
 
-**Status:** Working MVP with explicitly fictional demo snapshots. Real SEC collection is implemented; it needs your contact identifier. Optional live news and quotes need a provider key **and an agreement permitting public display and redistribution**. Nothing in the sample workspace is actual market reporting.
+**Current status:** The normal research view now loads TradingView's official symbol news Web Component with `news-type="all"` and its optional daily summary. It also displays matched short RSS excerpts and direct article links from `public-news.json`. Fictional snapshots are retained only as offline fixtures and are never shown in normal research. The embedded feed is not extracted into the app's own assessment engine. Full article/filing synthesis, real quotes, and SEC collection still require their respective connections.
+
+## Connected news path
+
+- Search or click a watchlist ticker: TradingView requests that exchange/symbol's news on demand. Coverage and availability remain the provider's responsibility. `show-daily-summary` requests its own summary where available; this is not a Signal Desk analyst assessment.
+- Every two hours, the Pages workflow runs `scripts/public_news.py`. It attempts the public Benzinga and Investing.com RSS feeds plus Nasdaq symbol feeds for `config.json` tickers. It indexes name/explicit-ticker matches against the entire directory. It does not download article bodies or bypass paywalls.
+- Source details show successful retrieval separately from failures. Initial live test: Benzinga returned 25 recent articles; Nasdaq requests failed; Investing.com had no usable recent items in the initial parser. A valid empty feed and a failed request are not treated as the same event.
+- All 16 requested sources are **not** connected extractors. Stocktwits is a labeled external social-discussion link; its documented API requires enterprise access. Reuters/Bloomberg and subscription research portals are not silently scraped.
+- A full on-demand extraction and synthesis service still needs a server backend and usable feed/search/analysis credentials. GitHub Pages serves files; it cannot run that service itself. API secrets must remain on the server or in Actions.
+
+The sections below describe the optional SEC/Finnhub/Benzinga API collector in addition to this public news path.
 
 ## Run locally
 
