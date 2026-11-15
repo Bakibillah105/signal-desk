@@ -51,7 +51,7 @@ function showWatchlist() {
   function draw() {
     $('.watch-scroll').innerHTML = watchlist.length ? watchlist.map(symbol => `<div class="dialog-watchlist"><button class="watch-open" data-watch-open="${esc(symbol)}"><strong>${esc(symbol)}</strong><span>${esc(directory.find(x => x.symbol === symbol)?.name ?? 'Listing not in current directory')}</span><small>${manifest.tickers.some(t=>t.symbol===symbol)?'Research available':'News feed not connected'}</small></button><button data-watch-remove="${esc(symbol)}" aria-label="Remove ${esc(symbol)}">Remove</button></div>`).join('') : '<p>Your watchlist is empty. Add your first tickers above.</p>';
     document.querySelectorAll('[data-watch-open]').forEach(button => button.addEventListener('click', () => { $('#info-dialog').close(); navigate(button.dataset.watchOpen); }));
-    document.querySelectorAll('[data-watch-remove]').forEach(button => button.addEventListener('click', () => { watchlist=watchlist.filter(x=>x!==button.dataset.watchRemove);store.set('signaldesk-watchlist',watchlist);draw();renderQuick(); }));
+    document.querySelectorAll('[data-watch-remove]').forEach(button => button.addEventListener('click', () => { watchlist=watchlist.filter(x=>x!==button.dataset.watchRemove);store.set('signaldesk-watchlist',watchlist);draw();renderQuick();if(current)renderResearch(); }));
   }
   $('#bulk-watch-form').addEventListener('submit',event=>{
     event.preventDefault();
@@ -60,7 +60,7 @@ function showWatchlist() {
     watchlist=[...new Set([...watchlist,...result.accepted])];store.set('signaldesk-watchlist',watchlist);
     $('#watch-feedback').textContent=`Added ${watchlist.length-before} stocks. ${result.rejected.length?'Not in the current directory: '+result.rejected.join(', '):'Duplicates were skipped.'}`;
     if(!result.rejected.length) $('#bulk-tickers').value='';
-    draw();renderQuick();
+    draw();renderQuick();if(current)renderResearch();
   });
   draw();
 }
@@ -148,8 +148,8 @@ async function loadTicker(symbol) {
 }
 
 function sourceStamp(status) {
-  if (current.demo) return 'Fictional sample';
   if (!status || status.state === 'missing') return 'Not connected';
+  if (current.demo) return 'Fictional sample';
   if (status.state === 'error') return 'Unavailable';
   const f = freshness(status.fetchedAt, Date.now(), manifest.staleAfterHours);
   return f === 'fresh' ? 'Collected' : f === 'stale' ? 'Stale' : 'Time unverified';
@@ -188,7 +188,7 @@ function earningsText() {
 function renderNews() {
   const all = dedupeNews(current.news ?? []);
   const items = all.filter(n => newsFilter === 'all' || n.category === newsFilter);
-  $('#news-panel').innerHTML = `<div class="panel-header"><div><h3>Company news <span class="count-pill">${all.length}</span></h3><p>${current.demo ? 'Illustrative stories · not actual reporting' : 'Provider summaries · newest first'}</p></div><div class="news-controls" aria-label="Filter news">${[['all','All news'],['earnings','Earnings'],['company','Company']].map(([key,label])=>`<button class="filter-button ${newsFilter===key?'active':''}" data-news-filter="${key}" aria-pressed="${newsFilter===key}">${label}</button>`).join('')}</div></div>` + (items.length ? items.map(n=>`<article class="news-item" id="news-${esc(n.id)}"><div class="news-meta"><span class="source-dot">${esc(n.source?.[0] ?? 'N')}</span><span>${esc(n.source)}</span><span>·</span><span>${current.demo?'Sample story':'Company news'}</span><time datetime="${esc(n.publishedAt)}">${esc(date(n.publishedAt))}</time></div><h4>${link(current.demo?null:n.url,esc(n.headline)+' <span aria-hidden="true">↗</span>')}</h4><p>${esc(n.summary || 'The provider did not supply a summary. Read the original source for details.')}</p><div class="news-bottom"><span class="tag">${esc(n.category ?? 'company')}</span>${n.signalReviewed?`<span class="tag ${esc(n.signal)}">${current.demo?'Sample ':''}${esc(n.signal)} evidence</span>`:''}${current.demo?'<span class="read-link">Fictional example · no article</span>':link(n.url,'Read article ↗','read-link')}</div></article>`).join('') : `<div class="empty-state">${all.length ? 'No stories match this filter.' : 'Company news is not available in this snapshot. The collector can add a licensed news provider; no stories or sentiment have been invented.'}</div>`);
+  $('#news-panel').innerHTML = `<div class="panel-header"><div><h3>Company news <span class="count-pill">${all.length}</span></h3><p>${current.demo ? 'Illustrative stories · not actual reporting' : current.notCollected ? 'News feed not connected for this ticker' : 'Provider summaries · newest first'}</p></div><div class="news-controls" aria-label="Filter news">${[['all','All news'],['earnings','Earnings'],['company','Company']].map(([key,label])=>`<button class="filter-button ${newsFilter===key?'active':''}" data-news-filter="${key}" aria-pressed="${newsFilter===key}">${label}</button>`).join('')}</div></div>` + (items.length ? items.map(n=>`<article class="news-item" id="news-${esc(n.id)}"><div class="news-meta"><span class="source-dot">${esc(n.source?.[0] ?? 'N')}</span><span>${esc(n.source)}</span><span>·</span><span>${current.demo?'Sample story':'Company news'}</span><time datetime="${esc(n.publishedAt)}">${esc(date(n.publishedAt))}</time></div><h4>${link(current.demo?null:n.url,esc(n.headline)+(current.demo?'':' <span aria-hidden="true">↗</span>'))}</h4><p>${esc(n.summary || 'The provider did not supply a summary. Read the original source for details.')}</p><div class="news-bottom"><span class="tag">${esc(n.category ?? 'company')}</span>${n.signalReviewed?`<span class="tag ${esc(n.signal)}">${current.demo?'Sample ':''}${esc(n.signal)} evidence</span>`:''}${current.demo?'<span class="read-link">Fictional example · no article</span>':link(n.url,'Read article ↗','read-link')}</div></article>`).join('') : `<div class="empty-state">${all.length ? 'No stories match this filter.' : 'Company news is not available in this snapshot. The collector can add a licensed news provider; no stories or sentiment have been invented.'}</div>`);
   document.querySelectorAll('[data-news-filter]').forEach(b=>b.addEventListener('click',()=>{newsFilter=b.dataset.newsFilter;renderNews();}));
 }
 const formDescription = form => ({'10-K':'Annual report','10-Q':'Quarterly report','8-K':'Current report','4':'Insider ownership disclosure','3':'Initial ownership disclosure','5':'Annual ownership disclosure','6-K':'Foreign issuer report','20-F':'Foreign issuer annual report','40-F':'Canadian issuer annual report','S-3':'Securities registration','S-1':'Securities registration'}[form.replace('/A','')] ?? 'Company disclosure');
