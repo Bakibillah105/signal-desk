@@ -27,7 +27,7 @@ npm run build
 3. The collector writes timestamped JSON for the configured research universe. The Action commits public snapshots, builds the static site, and deploys GitHub Pages.
 4. The browser searches the directory and reads those same-origin JSON files. It never receives a provider key or calls SEC directly.
 
-The sample directory contains 7 companies; 6 have fictional research snapshots. Real collection builds a wider directory from official listings. There is no claim of exhaustive US equity coverage: unsupported names/security types and companies absent from the SEC map are omitted conservatively. A directory match without a collected snapshot shows an honest “not collected” state. There are no options, futures, shorts, trade buttons, or orders.
+Every Pages build refreshes the searchable directory from both official Nasdaq Trader listing files, without an API key. A separate weekday schedule keeps this directory current. It includes supported exchange-listed common/ordinary stocks and ADRs across Nasdaq, NYSE and other US exchanges. OTC securities, funds, ETFs, preferreds, warrants and ambiguous security types are excluded. The repository retains seven offline directory fixtures and six fictional snapshots for local testing; deployed search uses the expanded directory. A searchable ticker does not imply that a research snapshot has been collected. No options, futures, shorts or orders are supported.
 
 ### Why this approach
 
@@ -41,6 +41,8 @@ SEC APIs do not support browser CORS. Static hosting cannot conceal API keys or 
 4. In **Settings → Secrets and variables → Actions**, add repository secret `SEC_USER_AGENT`, containing an app name and a real contact email, for example `SignalDesk your-real-email@example.com`. Replace the example with your actual contact. It is sent to SEC as its declared User-Agent; it is not exported into JSON.
 5. Run **Refresh research data and deploy** manually. With just `SEC_USER_AGENT`, the site has real filings and SEC industry metadata; news, prices, and earnings remain explicitly unavailable.
 6. For optional company news and market data, add secret `FINNHUB_API_KEY`. Only after confirming the necessary public display/redistribution rights, set repository **variable** `ALLOW_PUBLIC_MARKET_DATA` to `true`. Finnhub personal/free plans do not automatically grant these rights. A missing or false flag disables every vendor export, even if the key exists.
+
+For Benzinga news, add repository secret `BENZINGA_API_KEY` and, after confirming public display rights for your plan, repository variable `ALLOW_PUBLIC_BENZINGA_DATA=true`. The adapter preserves each article URL and attribution. Benzinga does not require enabling Finnhub. Provider credentials have not been configured or live-tested in this update.
 
 The refresh workflow is scheduled weekdays at **7:17 PM Bangladesh time** (13:17 UTC). That is 08:17 or 09:17 in New York depending on US daylight saving. This is a collection schedule, not a real-time service; Actions can run late, scheduled workflows may be disabled after inactivity, and US holidays are not specially excluded. Change or remove the cron in `.github/workflows/refresh.yml` as desired. Follow GitHub's Actions policy and available usage quota.
 
@@ -57,9 +59,10 @@ For class shares use `BRK.B`; the SEC's `BRK-B` spelling is normalized. Check pr
 ## What works in this stage
 
 - Ticker/name autocomplete, keyboard navigation, class-share normalization, and directory validation.
-- Responsive light/dark UI, local saved watchlist, deep links via `#ticker=AAPL`.
-- Company news with short provider excerpts, source/date/links, deduplication and category filters.
-- Recent SEC annual/quarterly/current/ownership filing metadata, official document links, and form filters. This is a bounded recent feed, not a complete filing archive. Form 4 is an ownership disclosure, not an automatic buy/sell inference.
+- Larger 16px research text, responsive light/dark UI, bulk-paste watchlist with validation and deduplication, scrollable saved symbols, click-to-open research, and deep links via `#ticker=AAPL`. Watchlists remain local to this browser.
+- Company news with short provider excerpts, source/date/article-specific URLs, deduplication and category filters. Fictional sample stories have no article link, instead of misleading links to company homepages.
+- An overall prose assessment above the retained bull/bear/catalyst/risk items, with explicit coverage limitations. The illustrative narrative describes only fictional sample evidence.
+- Recent SEC annual/quarterly/current/ownership filing metadata, official document links, form filters, and plain-English explanations of filing types and 8-K item codes. Explanations identify what to investigate; they do not claim the underlying documents were analyzed. This is a bounded recent feed, not a complete filing archive. Form 4 is an ownership disclosure, not an automatic buy/sell inference.
 - A basic source-linked summary of the latest seven calendar days, with bull/bear evidence only when explicitly reviewed. Finnhub news arrives unreviewed, so live sentiment defaults to **neutral — insufficient directional evidence**. No keyword classifier or invented AI analysis is used. The positive/negative demo evidence exists only to illustrate the interface.
 - Source availability, collection timestamps, stale-data labels, unknown values, and explicit demo labeling.
 - A visible not-financial-advice disclaimer. No halal screening is implied.
@@ -76,7 +79,7 @@ See [SOURCE_FEASIBILITY.md](SOURCE_FEASIBILITY.md) for every requested source, o
 
 ## Security and data handling
 
-Keys exist only in Actions secrets/environment variables, are sent in provider headers, and are never serialized into the site. Do not commit `.env`. Provider errors are sanitized. Vendor data is excluded by default. API text is rendered with HTML escaping, and external links accept only HTTP/HTTPS and use `noopener noreferrer`. Source content is not executable. Watchlists and theme preferences are local to the browser; no account, analytics, or tracking is included. Google Fonts is optional: system fonts take over if it is unavailable.
+Keys exist only in Actions secrets/environment variables, are sent only to their provider (Finnhub header; Benzinga HTTPS query), and are never serialized into the site. Do not commit `.env`. Provider errors are sanitized. Vendor data is excluded by default. API text is rendered with HTML escaping, and external links accept only HTTP/HTTPS and use `noopener noreferrer`. Source content is not executable. Watchlists and theme preferences are local to the browser; no account, analytics, or tracking is included. Google Fonts is optional: system fonts take over if it is unavailable.
 
 Before enabling a new dataset, confirm its display and redistribution rights for your deployment. If vendor rights end, remove the exported dataset from Pages and repository history as required by your agreement; deleting only the latest UI file may not remove historical copies.
 

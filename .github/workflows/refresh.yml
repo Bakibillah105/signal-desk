@@ -34,6 +34,8 @@ jobs:
         env:
           SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          BENZINGA_API_KEY: ${{ secrets.BENZINGA_API_KEY }}
+          ALLOW_PUBLIC_BENZINGA_DATA: ${{ vars.ALLOW_PUBLIC_BENZINGA_DATA }}
           ALLOW_PUBLIC_MARKET_DATA: ${{ vars.ALLOW_PUBLIC_MARKET_DATA }}
         run: python scripts/collect.py
       - name: Commit public snapshots
@@ -47,6 +49,7 @@ jobs:
           fi
       # GITHUB_TOKEN commits do not trigger the push workflow. Build and deploy
       # in this workflow explicitly so refreshed data actually reaches Pages.
+      - run: python scripts/directory.py
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

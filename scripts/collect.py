@@ -77,7 +77,7 @@ class Fetcher:
             if host in SEC_HOSTS:
                 time.sleep(max(0, 0.25 - (time.monotonic() - self.last_sec)))
                 self.last_sec = time.monotonic()  # At most 4 requests/second.
-            elif host == "finnhub.io":
+            elif host in {"finnhub.io", "api.benzinga.com"}:
                 time.sleep(max(0, 1.1 - (time.monotonic() - self.last_vendor)))
                 self.last_vendor = time.monotonic()  # Below 60 requests/minute.
             try:
@@ -288,6 +288,18 @@ def main():
         print("Not verified as supported US common equity/ADR: " + ", ".join(missing), file=sys.stderr)
         return 2
     snapshots = [collect_ticker(lookup[s], fetcher, config, token) for s in symbols]
+    bz_token = os.environ.get('BENZINGA_API_KEY','').strip()
+    if bz_token and os.environ.get('ALLOW_PUBLIC_BENZINGA_DATA','').lower() == 'true':
+        from benzinga import collect_news
+        for snapshot in snapshots:
+            try:
+                extra = collect_news(fetcher,snapshot['symbol'],bz_token,config['newsLookbackDays'],config['maxNews'])
+                merged = {n['url']:n for n in snapshot['news']+extra}
+                snapshot['news'] = sorted(merged.values(),key=lambda n:n['publishedAt'],reverse=True)[:config['maxNews']]
+                snapshot['sources']['news'] = status('ok',now_iso())
+                snapshot['sources']['benzinga'] = status('ok',now_iso())
+            except RuntimeError:
+                snapshot['sources']['benzinga'] = status('error')
     # Total upstream failure never silently replaces good data or publishes demo.
     if not any(d["sources"]["sec"]["state"] == "ok" for d in snapshots):
         print("SEC collection failed for every ticker; previous publication preserved.", file=sys.stderr)
