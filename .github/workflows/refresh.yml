@@ -50,6 +50,7 @@ jobs:
       # GITHUB_TOKEN commits do not trigger the push workflow. Build and deploy
       # in this workflow explicitly so refreshed data actually reaches Pages.
       - run: python scripts/directory.py
+      - run: python scripts/public_news.py
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

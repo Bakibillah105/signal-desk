@@ -11,6 +11,6 @@ test('SEC interpretation identifies earnings and avoids claiming a surprise',()=
   assert.match(filingInsight({form:'10-Q/A'}),/Amended filing/);
 });
 test('missing news cannot produce an optimistic overall conclusion',()=>{
-  assert.match(narrative({symbol:'TEST'},{newsCount:0}),/not enough current news/);
+  assert.match(narrative({symbol:'TEST'},{newsCount:0}),/has not been generated/);
   assert.match(narrative({demo:true},{}),/fictional examples/);
 });
