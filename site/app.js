@@ -110,13 +110,14 @@ async function loadTicker(symbol) {
   const listing = directory.find(x => x.symbol === symbol);
   if (!listing) { $('#search-error').textContent = 'This ticker is not in the current US equity directory.'; if (!current) $('#research').innerHTML = '<section class="panel empty-state">Search a supported US-listed company to begin.</section>'; return; }
   const token = ++generation;
+  document.title = `${symbol} · Signal Desk`;
   $('#ticker-input').value = symbol;
   $('#research').innerHTML = '<div class="loading-state"><span class="loader"></span> Loading company research…</div>';
   $('#research').setAttribute('aria-busy','true');
   const available = manifest.tickers.some(x => x.symbol === symbol);
   if (!available) {
     current = {symbol}; renderQuick();
-    $('#research').innerHTML = `<section class="panel empty-state"><div class="eyebrow">VALID LISTING · NO SNAPSHOT</div><h3>${esc(listing.name)} <span class="count-pill">${esc(symbol)}</span></h3><p>This company is in the US listing directory, but has not been collected yet. Add <strong>${esc(symbol)}</strong> to <code>config.json</code> and run the data-refresh workflow.</p><p>Static hosting cannot fetch a new protected API snapshot on demand. ${link(`https://www.sec.gov/edgar/browse/?CIK=${encodeURIComponent(listing.cik)}`,'Open this company on SEC EDGAR ↗')}</p></section>`;
+    $('#research').innerHTML = `<section class="panel empty-state"><div class="eyebrow">VALID LISTING · NO SNAPSHOT</div><h3>${esc(listing.name)} <span class="count-pill">${esc(symbol)}</span></h3><p>This is a valid US equity listing. A research snapshot is not available in this workspace yet.</p><p>Available research: ${manifest.tickers.map(t=>`<a class="evidence-link" href="#ticker=${encodeURIComponent(t.symbol)}">${esc(t.symbol)}</a>`).join(' · ')}.</p><p>Meanwhile, you can check the company's original disclosures. ${link(`https://www.sec.gov/edgar/browse/?CIK=${encodeURIComponent(listing.cik)}`,'Open SEC EDGAR ↗')}</p></section>`;
     $('#research').removeAttribute('aria-busy'); return;
   }
   try {
