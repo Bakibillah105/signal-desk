@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "mode": "demo",
+  "generatedAt": "2026-11-13T22:00:00Z",
+  "staleAfterHours": 24,
+  "holdingPeriod": "2–5 trading days",
+  "tickers": [
+    {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "cik": "0000320193",
+      "exchange": "Nasdaq"
+    },
+    {
+      "symbol": "MSFT",
+      "name": "Microsoft Corporation",
+      "cik": "0000789019",
+      "exchange": "Nasdaq"
+    },
+    {
+      "symbol": "NVDA",
+      "name": "NVIDIA Corporation",
+      "cik": "0001045810",
+      "exchange": "Nasdaq"
+    },
+    {
+      "symbol": "AMD",
+      "name": "Advanced Micro Devices, Inc.",
+      "cik": "0000002488",
+      "exchange": "Nasdaq"
+    },
+    {
+      "symbol": "AMZN",
+      "name": "Amazon.com, Inc.",
+      "cik": "0001018724",
+      "exchange": "Nasdaq"
+    },
+    {
+      "symbol": "GOOGL",
+      "name": "Alphabet Inc.",
+      "cik": "0001652044",
+      "exchange": "Nasdaq"
+    }
+  ]
+}

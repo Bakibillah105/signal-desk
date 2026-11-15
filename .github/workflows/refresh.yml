@@ -1,0 +1,66 @@
+name: Refresh research data and deploy
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekdays at 13:17 UTC: 7:17 PM Bangladesh, 08:17/09:17 New York.
+    # UTC does not move with US daylight saving. Actions may run late.
+    - cron: '17 13 * * 1-5'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm test
+      - run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: Fetch primary filings and optional licensed news
+        env:
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          ALLOW_PUBLIC_MARKET_DATA: ${{ vars.ALLOW_PUBLIC_MARKET_DATA }}
+        run: python scripts/collect.py
+      - name: Commit public snapshots
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add site/data
+          if ! git diff --staged --quiet; then
+            git commit -m 'Refresh public research snapshots'
+            git push
+          fi
+      # GITHUB_TOKEN commits do not trigger the push workflow. Build and deploy
+      # in this workflow explicitly so refreshed data actually reaches Pages.
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  deploy:
+    needs: refresh
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy refreshed snapshots
+        id: deployment
+        uses: actions/deploy-pages@v4

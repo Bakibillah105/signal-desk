@@ -1,0 +1,8 @@
+{
+  "tickers": ["AAPL", "MSFT", "NVDA", "AMD", "AMZN", "GOOGL"],
+  "newsLookbackDays": 7,
+  "maxNews": 20,
+  "maxFilings": 30,
+  "holdingPeriod": "2–5 trading days",
+  "staleAfterHours": 24
+}

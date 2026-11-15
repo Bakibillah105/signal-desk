@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "demo": true,
+  "symbol": "NVDA",
+  "name": "NVIDIA Corporation",
+  "cik": "0001045810",
+  "exchange": "Nasdaq",
+  "asOf": "2026-11-13T22:00:00Z",
+  "profile": {
+    "sector": "Technology",
+    "industry": "Semiconductors"
+  },
+  "quote": {
+    "price": 146.28,
+    "changePercent": -0.65,
+    "asOf": "2026-11-13T22:00:00Z"
+  },
+  "metrics": {
+    "marketCap": 3580000000000.0,
+    "pe": 48.9,
+    "revenueGrowth": 52.3
+  },
+  "earnings": null,
+  "news": [
+    {
+      "id": "sample-results",
+      "headline": "NVIDIA reports revenue growth in illustrative quarterly update",
+      "summary": "This fictional story shows how a company earnings update appears in the research feed. In this example, higher revenue and stronger demand support a potential upside argument.",
+      "source": "Sample company release",
+      "publishedAt": "2026-11-13T16:00:00Z",
+      "category": "earnings",
+      "signal": "positive",
+      "signalReviewed": true,
+      "url": "https://nvidianews.nvidia.com/"
+    },
+    {
+      "id": "sample-outlook",
+      "headline": "Management outlines a new product roadmap and investment priorities",
+      "summary": "A fictional management update highlights upcoming launches and investment plans. The example has no assessed directional impact and is included to demonstrate source context.",
+      "source": "Sample company newsroom",
+      "publishedAt": "2026-11-12T18:00:00Z",
+      "category": "company",
+      "signal": "neutral",
+      "signalReviewed": true,
+      "url": "https://nvidianews.nvidia.com/"
+    },
+    {
+      "id": "sample-risk",
+      "headline": "Higher input costs could weigh on near-term operating margins",
+      "summary": "This fictional risk example describes a possible margin headwind. It demonstrates how an adverse development is linked to the bear case without issuing a trading instruction.",
+      "source": "Sample research note",
+      "publishedAt": "2026-11-12T12:00:00Z",
+      "category": "company",
+      "signal": "negative",
+      "signalReviewed": true,
+      "url": "https://nvidianews.nvidia.com/"
+    },
+    {
+      "id": "sample-service",
+      "headline": "Recurring revenue segment shows resilience in a sample business update",
+      "summary": "An illustrative operating update points to steadier recurring demand. The headline and summary are invented examples, not actual statements from this company.",
+      "source": "Sample company release",
+      "publishedAt": "2026-11-11T15:00:00Z",
+      "category": "company",
+      "signal": "positive",
+      "signalReviewed": true,
+      "url": "https://nvidianews.nvidia.com/"
+    }
+  ],
+  "filings": [
+    {
+      "id": "sample-0",
+      "form": "8-K",
+      "filedAt": "2026-11-13",
+      "items": "2.02, 9.01",
+      "url": "https://www.sec.gov/edgar/browse/?CIK=0001045810"
+    },
+    {
+      "id": "sample-1",
+      "form": "4",
+      "filedAt": "2026-11-12",
+      "items": "",
+      "url": "https://www.sec.gov/edgar/browse/?CIK=0001045810"
+    },
+    {
+      "id": "sample-2",
+      "form": "10-Q",
+      "filedAt": "2026-11-10",
+      "items": "",
+      "url": "https://www.sec.gov/edgar/browse/?CIK=0001045810"
+    },
+    {
+      "id": "sample-3",
+      "form": "8-K",
+      "filedAt": "2026-11-09",
+      "items": "5.02",
+      "url": "https://www.sec.gov/edgar/browse/?CIK=0001045810"
+    }
+  ],
+  "sources": {
+    "sec": {
+      "state": "demo",
+      "fetchedAt": null
+    },
+    "news": {
+      "state": "demo",
+      "fetchedAt": null
+    },
+    "market": {
+      "state": "demo",
+      "fetchedAt": null
+    },
+    "earnings": {
+      "state": "demo",
+      "fetchedAt": null
+    }
+  }
+}
