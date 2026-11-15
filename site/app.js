@@ -50,6 +50,7 @@ function showWatchlist() {
   document.querySelectorAll('[data-watch-open]').forEach(button => button.addEventListener('click', () => { $('#info-dialog').close(); navigate(button.dataset.watchOpen); }));
 }
 $('#open-watchlist').addEventListener('click', showWatchlist);
+$('#mobile-watchlist').addEventListener('click', showWatchlist);
 function renderQuick() {
   $('#watch-count').textContent = watchlist.length;
   $('#quick-tickers').innerHTML = (manifest?.tickers ?? []).slice(0, 6).map(t => `<button class="quick-ticker ${current?.symbol === t.symbol ? 'selected' : ''}" data-ticker="${esc(t.symbol)}"><span class="mini-logo">${esc(t.symbol[0])}</span><span><strong>${esc(t.symbol)}</strong><small>${esc(t.name.length > 22 ? t.name.slice(0,20)+'…' : t.name)}</small></span><span class="quick-arrow">↗</span></button>`).join('');
@@ -105,10 +106,10 @@ function renderBanner() {
 }
 
 async function loadTicker(symbol) {
-  const token = ++generation;
   $('#search-error').textContent = '';
   const listing = directory.find(x => x.symbol === symbol);
-  if (!listing) { $('#search-error').textContent = 'This ticker is not in the current US equity directory.'; return; }
+  if (!listing) { $('#search-error').textContent = 'This ticker is not in the current US equity directory.'; if (!current) $('#research').innerHTML = '<section class="panel empty-state">Search a supported US-listed company to begin.</section>'; return; }
+  const token = ++generation;
   $('#ticker-input').value = symbol;
   $('#research').innerHTML = '<div class="loading-state"><span class="loader"></span> Loading company research…</div>';
   $('#research').setAttribute('aria-busy','true');
@@ -140,7 +141,8 @@ function sourceStamp(status) {
 }
 function renderResearch() {
   const d = current, p = d.profile ?? {}, q = d.quote ?? {}, m = d.metrics ?? {};
-  const stamp = sourceStamp(d.sources?.market);
+  const quoteFreshness = freshness(q.asOf, Date.now(), manifest.staleAfterHours);
+  const stamp = !d.demo && q.asOf && quoteFreshness !== 'fresh' ? (quoteFreshness === 'stale' ? 'Stale quote' : 'Quote time unverified') : sourceStamp(d.sources?.market);
   const priceTime = q.asOf ? date(q.asOf) : 'Time unavailable';
   const watchSaved = watchlist.includes(d.symbol);
   $('#research').innerHTML = `
@@ -155,6 +157,12 @@ function renderResearch() {
   $('#save-ticker').addEventListener('click', () => { const symbol = d.symbol; watchlist = watchlist.includes(symbol) ? watchlist.filter(x => x !== symbol) : [...watchlist,symbol]; store.set('signaldesk-watchlist',watchlist); renderResearch(); renderQuick(); });
   $('#refresh-ticker').addEventListener('click', async () => { const button = $('#refresh-ticker'); button.disabled = true; button.textContent = 'Refreshing…'; try { manifest = await json('./data/manifest.json'); renderBanner(); await loadTicker(d.symbol); } catch { $('#search-error').textContent = 'The latest snapshot could not be checked. Please try again.'; button.disabled = false; button.textContent = '↻ Refresh snapshot'; } });
   renderNews(); renderFilings(); renderAssessment();
+  $('#assessment-panel').querySelectorAll('.evidence-link').forEach(anchor => anchor.addEventListener('click', event => {
+    event.preventDefault();
+    const target = anchor.getAttribute('href').slice(1);
+    newsFilter = 'all'; filingFilter = 'all'; renderNews(); renderFilings();
+    document.getElementById(target)?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'center'});
+  }));
 }
 function earningsText() {
   const e = current.earnings;
