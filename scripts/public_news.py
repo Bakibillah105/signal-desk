@@ -18,6 +18,7 @@ from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
 UTC=dt.timezone.utc
+PUBLISHERS={'sec.gov':'SEC EDGAR','nasdaq.com':'Nasdaq','nyse.com':'NYSE','reuters.com':'Reuters','bloomberg.com':'Bloomberg','finance.yahoo.com':'Yahoo Finance','investing.com':'Investing.com','stockanalysis.com':'StockAnalysis','koyfin.com':'Koyfin','tikr.com':'TIKR','macrotrends.net':'Macrotrends','earningswhispers.com':'Earnings Whispers','finviz.com':'Finviz','tradingview.com':'TradingView','benzinga.com':'Benzinga','stocktwits.com':'Stocktwits'}
 
 def clean(value):
     return re.sub(r'\s+',' ',html.unescape(re.sub(r'<[^>]*>',' ',value or ''))).strip()
@@ -72,11 +73,40 @@ def fetch_feed(spec):
         request=urllib.request.Request(url,headers={'User-Agent':'SignalDesk RSS reader (+https://github.com/Bakibillah105/signal-desk)','Accept':'application/rss+xml, application/xml, text/xml'})
         with urllib.request.urlopen(request,timeout=18) as response:
             raw=response.read(3000000)
-        rows=parse_feed(raw,name,host)
+        rows=parse_index(raw) if name=='Publisher index' else parse_feed(raw,name,host)
         return rows,{'source':name,'symbol':symbol,'state':'ok','count':len(rows),'fetchedAt':now,'feedUrl':url}
     except Exception as exc:
         code=getattr(exc,'code',None)
         return [],{'source':name,'symbol':symbol,'state':'error','reason':f'HTTP {code}' if code else 'Feed unavailable or invalid','fetchedAt':now,'feedUrl':url}
+
+def parse_index(raw):
+    # Public search RSS contains publisher attribution and article redirect links.
+    # It does not grant access to full publisher articles or bypass a paywall.
+    rows=parse_feed(raw,'Publisher index','news.google.com')
+    root=ET.fromstring(raw)
+    allowed={}
+    for item in root.findall('.//item'):
+        source=item.find('source')
+        if source is None:continue
+        host=urllib.parse.urlsplit(source.get('url','')).hostname or ''
+        publisher=next((name for domain,name in PUBLISHERS.items() if host==domain or host.endswith('.'+domain)),None)
+        url=clean(item.findtext('link'))
+        if publisher and urllib.parse.urlsplit(url).path.startswith('/rss/articles/'):
+            allowed[url]=(publisher,clean(source.text))
+    result=[]
+    for row in rows:
+        if row['url'] not in allowed:continue
+        publisher,label=allowed[row['url']]
+        suffix=' - '+label
+        if row['headline'].endswith(suffix):row['headline']=row['headline'][:-len(suffix)]
+        row.update(source=publisher,summary='',discovery='Google News RSS',linkType='article-redirect')
+        # Community posts are a separate evidence type, not company reporting.
+        if publisher=='Stocktwits':row['category']='community'
+        result.append(row)
+    return result
+
+def index_url(query):
+    return 'https://news.google.com/rss/search?'+urllib.parse.urlencode({'q':query+' when:14d','hl':'en-US','gl':'US','ceid':'US:en'})
 
 def parse_sec(raw):
     root=ET.fromstring(raw)
@@ -110,9 +140,17 @@ def main():
     directory=json.loads((ROOT/'site/data/directory.json').read_text(encoding='utf-8'))
     config=json.loads((ROOT/'config.json').read_text(encoding='utf-8'))
     specs=[('Investing.com','https://www.investing.com/rss/news_25.rss','investing.com'),('Benzinga','https://www.benzinga.com/feed','benzinga.com')]
+    domains=list(PUBLISHERS)
+    # Broad publisher discovery is matched against the full stock directory.
+    # Ticker-specific queries supplement it for the configured research list.
+    for i in range(0,len(domains),4):
+        specs.append(('Publisher index',index_url('stock ('+' OR '.join('site:'+d for d in domains[i:i+4])+')'),'news.google.com'))
+    lookup={x['symbol']:x for x in directory}
     # These public symbol feeds are collected for the configured research universe.
     # The live embedded feed in the UI handles arbitrary on-demand symbol selection.
     for symbol in config['tickers']:
+        name=company_key(lookup.get(symbol,{}).get('name',symbol))
+        specs.append(('Publisher index',index_url('"'+name+'"'),'news.google.com'))
         specs.append(('Nasdaq','https://www.nasdaq.com/feed/rssoutbound?symbol='+urllib.parse.quote(symbol),'nasdaq.com'))
         specs.append(('Yahoo Finance','https://feeds.finance.yahoo.com/rss/2.0/headline?'+urllib.parse.urlencode({'s':symbol.replace('.','-'),'region':'US','lang':'en-US'}),'yahoo.com'))
     all_items={}; statuses=[]

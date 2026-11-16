@@ -37,7 +37,7 @@ export function evidenceBrief(data, now=Date.now()) {
   const seen=new Set();
   const news=(data.news ?? []).filter(n=>{
     const age=now-Date.parse(n.publishedAt); const key=String(n.headline).toLowerCase().replace(/\W/g,'');
-    if(!n.headline || !/^https?:\/\//.test(n.url ?? '') || !Number.isFinite(age) || age<0 || age>14*86400000 || seen.has(key))return false;
+    if(n.category==='community' || !n.headline || !/^https?:\/\//.test(n.url ?? '') || !Number.isFinite(age) || age<0 || age>14*86400000 || seen.has(key))return false;
     seen.add(key);return true;
   });
   const themes=topics.map(([key,pattern,label,bull,bear,check])=>({key,label,bull,bear,check,items:news.filter(n=>pattern.test(n.headline+' '+(n.summary ?? ''))).slice(0,3)})).filter(t=>t.items.length);

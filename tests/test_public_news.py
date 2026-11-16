@@ -1,9 +1,17 @@
 import sys, unittest, datetime as dt
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from public_news import parse_feed,related,parse_sec
+from public_news import parse_feed,related,parse_sec,parse_index
 
 class PublicNewsTests(unittest.TestCase):
+    def test_index_accepts_only_requested_publishers_and_article_links(self):
+        date=(dt.datetime.now(dt.timezone.utc)-dt.timedelta(hours=1)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        def entry(source,host,slug):return f'<item><title>Company update - {source}</title><link>https://news.google.com/rss/articles/{slug}</link><source url="https://{host}">{source}</source><pubDate>{date}</pubDate></item>'
+        rows=parse_index('<rss><channel>'+entry('Reuters','www.reuters.com','A')+entry('Other','evil.example','B')+'</channel></rss>')
+        self.assertEqual(len(rows),1)
+        self.assertEqual(rows[0]['source'],'Reuters')
+        self.assertEqual(rows[0]['headline'],'Company update')
+        self.assertEqual(rows[0]['linkType'],'article-redirect')
     def test_sec_atom_metadata_and_safe_url(self):
         raw='''<feed xmlns="http://www.w3.org/2005/Atom"><entry><category term="8-K"/><updated>2026-11-15T12:00:00-05:00</updated><link rel="alternate" href="https://www.sec.gov/Archives/edgar/data/1/123/document.htm"/></entry><entry><category term="4"/><updated>2026-11-15T12:00:00Z</updated><link href="https://evil.example/filing"/></entry></feed>'''
         rows=parse_sec(raw)
