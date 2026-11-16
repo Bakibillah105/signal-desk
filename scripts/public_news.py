@@ -126,12 +126,17 @@ def parse_sec(raw):
         rows.append({'id':'sec-'+hashlib.sha256(href.encode()).hexdigest()[:16], 'form':form,'filedAt':filed,'url':href,'items':'','reportDate':None})
     return rows
 
-def fetch_sec(symbol):
-    url='https://www.sec.gov/cgi-bin/browse-edgar?'+urllib.parse.urlencode({'action':'getcompany','CIK':symbol.replace('.','-'),'owner':'include','count':40,'output':'atom'})
+def fetch_sec(symbol,listing=None):
+    cik=(listing or {}).get('cik')
+    url=('https://data.sec.gov/submissions/CIK'+str(cik).zfill(10)+'.json') if cik else 'https://www.sec.gov/cgi-bin/browse-edgar?'+urllib.parse.urlencode({'action':'getcompany','CIK':symbol.replace('.','-'),'owner':'include','count':40,'output':'atom'})
     status={'source':'SEC EDGAR','symbol':symbol,'feedUrl':url,'fetchedAt':dt.datetime.now(UTC).isoformat()}
     try:
-        req=urllib.request.Request(url,headers={'User-Agent':'SignalDesk public RSS reader (+https://github.com/Bakibillah105/signal-desk)','Accept':'application/atom+xml'})
-        with urllib.request.urlopen(req,timeout=18) as response: rows=parse_sec(response.read(3000000))
+        req=urllib.request.Request(url,headers={'User-Agent':'SignalDesk public research (+https://github.com/Bakibillah105/signal-desk)','Accept':'application/json' if cik else 'application/atom+xml'})
+        with urllib.request.urlopen(req,timeout=18) as response:raw=response.read(5000000)
+        if cik:
+            from collect import normalize_filings
+            rows=normalize_filings(json.loads(raw),30)
+        else:rows=parse_sec(raw)
         return rows,{**status,'state':'ok','count':len(rows)}
     except Exception as exc:
         return [],{**status,'state':'error','reason':f'HTTP {exc.code}' if getattr(exc,'code',None) else 'Feed unavailable or invalid'}
@@ -164,7 +169,7 @@ def main():
         if matched: by_symbol[listing['symbol']]=sorted(matched,key=lambda n:n['publishedAt'],reverse=True)[:20]
     filings={}
     for symbol in config['tickers']:
-        rows,status=fetch_sec(symbol)
+        rows,status=fetch_sec(symbol,lookup.get(symbol))
         statuses.append(status)
         if status['state']=='ok':filings[symbol]=rows
         time.sleep(.3)
