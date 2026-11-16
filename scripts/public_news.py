@@ -9,6 +9,7 @@ import hashlib
 import html
 import json
 import re
+import time
 import urllib.request
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -65,15 +66,45 @@ def related(item,listing):
 def fetch_feed(spec):
     name,url,host=spec
     now=dt.datetime.now(UTC).isoformat()
+    query=urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
+    symbol=(query.get('symbol') or query.get('s') or [None])[0]
     try:
         request=urllib.request.Request(url,headers={'User-Agent':'SignalDesk RSS reader (+https://github.com/Bakibillah105/signal-desk)','Accept':'application/rss+xml, application/xml, text/xml'})
         with urllib.request.urlopen(request,timeout=18) as response:
             raw=response.read(3000000)
         rows=parse_feed(raw,name,host)
-        return rows,{'source':name,'state':'ok','count':len(rows),'fetchedAt':now,'feedUrl':url}
+        return rows,{'source':name,'symbol':symbol,'state':'ok','count':len(rows),'fetchedAt':now,'feedUrl':url}
     except Exception as exc:
         code=getattr(exc,'code',None)
-        return [],{'source':name,'state':'error','reason':f'HTTP {code}' if code else 'Feed unavailable or invalid','fetchedAt':now,'feedUrl':url}
+        return [],{'source':name,'symbol':symbol,'state':'error','reason':f'HTTP {code}' if code else 'Feed unavailable or invalid','fetchedAt':now,'feedUrl':url}
+
+def parse_sec(raw):
+    root=ET.fromstring(raw)
+    if root.tag.split('}')[-1]!='feed': raise ValueError('Not an Atom feed')
+    for el in root.iter(): el.tag=el.tag.split('}')[-1]
+    rows=[]
+    for entry in root.findall('entry'):
+        category=entry.find('category')
+        form=category.get('term','') if category is not None else ''
+        if form.removesuffix('/A') not in {'10-K','10-Q','8-K','3','4','5','6-K','20-F','40-F','S-1','S-3'}:continue
+        href=next((x.get('href','') for x in entry.findall('link') if x.get('rel','alternate')=='alternate'),'')
+        url=urllib.parse.urlsplit(href)
+        if url.scheme!='https' or url.hostname!='www.sec.gov' or not url.path.startswith('/Archives/edgar/data/'):continue
+        updated=entry.findtext('updated','')
+        try: filed=dt.datetime.fromisoformat(updated.replace('Z','+00:00')).date().isoformat()
+        except ValueError:continue
+        rows.append({'id':'sec-'+hashlib.sha256(href.encode()).hexdigest()[:16], 'form':form,'filedAt':filed,'url':href,'items':'','reportDate':None})
+    return rows
+
+def fetch_sec(symbol):
+    url='https://www.sec.gov/cgi-bin/browse-edgar?'+urllib.parse.urlencode({'action':'getcompany','CIK':symbol.replace('.','-'),'owner':'include','count':40,'output':'atom'})
+    status={'source':'SEC EDGAR','symbol':symbol,'feedUrl':url,'fetchedAt':dt.datetime.now(UTC).isoformat()}
+    try:
+        req=urllib.request.Request(url,headers={'User-Agent':'SignalDesk public RSS reader (+https://github.com/Bakibillah105/signal-desk)','Accept':'application/atom+xml'})
+        with urllib.request.urlopen(req,timeout=18) as response: rows=parse_sec(response.read(3000000))
+        return rows,{**status,'state':'ok','count':len(rows)}
+    except Exception as exc:
+        return [],{**status,'state':'error','reason':f'HTTP {exc.code}' if getattr(exc,'code',None) else 'Feed unavailable or invalid'}
 
 def main():
     directory=json.loads((ROOT/'site/data/directory.json').read_text(encoding='utf-8'))
@@ -83,6 +114,7 @@ def main():
     # The live embedded feed in the UI handles arbitrary on-demand symbol selection.
     for symbol in config['tickers']:
         specs.append(('Nasdaq','https://www.nasdaq.com/feed/rssoutbound?symbol='+urllib.parse.quote(symbol),'nasdaq.com'))
+        specs.append(('Yahoo Finance','https://feeds.finance.yahoo.com/rss/2.0/headline?'+urllib.parse.urlencode({'s':symbol.replace('.','-'),'region':'US','lang':'en-US'}),'yahoo.com'))
     all_items={}; statuses=[]
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
         for rows,status in executor.map(fetch_feed,specs):
@@ -92,7 +124,13 @@ def main():
     for listing in directory:
         matched=[n for n in all_items.values() if related(n,listing)]
         if matched: by_symbol[listing['symbol']]=sorted(matched,key=lambda n:n['publishedAt'],reverse=True)[:20]
-    result={'generatedAt':dt.datetime.now(UTC).isoformat(),'sources':statuses,'bySymbol':by_symbol,'scope':'Recent public RSS excerpts; company-name and explicit ticker matches. Not exhaustive coverage.'}
+    filings={}
+    for symbol in config['tickers']:
+        rows,status=fetch_sec(symbol)
+        statuses.append(status)
+        if status['state']=='ok':filings[symbol]=rows
+        time.sleep(.3)
+    result={'generatedAt':dt.datetime.now(UTC).isoformat(),'sources':statuses,'bySymbol':by_symbol,'filingsBySymbol':filings,'collectionTickers':config['tickers'],'scope':'Recent public RSS excerpts; company-name and explicit ticker matches. Not exhaustive coverage.'}
     (ROOT/'site/data/public-news.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
     print(json.dumps({'sources':statuses,'uniqueArticles':len(all_items),'matchedTickers':len(by_symbol)}))
 

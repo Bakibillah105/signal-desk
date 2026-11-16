@@ -1,5 +1,5 @@
 {
-  "tickers": ["AAPL", "MSFT", "NVDA", "AMD", "AMZN", "GOOGL"],
+  "tickers": ["AAPL", "MSFT", "NVDA", "AMD", "AMZN", "GOOGL", "ARLO"],
   "newsLookbackDays": 7,
   "maxNews": 20,
   "maxFilings": 30,

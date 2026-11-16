@@ -7,3 +7,7 @@ body{font-size:16px}.sidebar{width:270px}.app-shell{margin-left:270px}main{max-w
 :root{--muted:#5d6d74}.assessment-summary,.case-text{color:var(--text)}.news-item p{color:var(--text)}
 
 .feed-note{font-size:14px;line-height:1.7;padding:0 22px 16px;color:var(--muted)}#live-news{min-height:660px;padding:0 12px}.tradingview-widget-copyright{padding:12px;font-size:13px;color:var(--green)}#collected-news{border-top:1px solid var(--line);margin-top:20px}
+
+.supplementary-news {margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
+.supplementary-news summary {cursor:pointer;font-size:1rem;padding:12px 0}
+.assessment-case small {display:block;margin-top:4px}

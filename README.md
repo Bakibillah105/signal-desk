@@ -2,15 +2,15 @@
 
 A static US equity research workspace for long-only decisions. Initial lens: **2–5 trading days**. Built for GitHub Pages, with no runtime dependencies, build framework, or browser API keys.
 
-**Current status:** The normal research view now loads TradingView's official symbol news Web Component with `news-type="all"` and its optional daily summary. It also displays matched short RSS excerpts and direct article links from `public-news.json`. Fictional snapshots are retained only as offline fixtures and are never shown in normal research. The embedded feed is not extracted into the app's own assessment engine. Full article/filing synthesis, real quotes, and SEC collection still require their respective connections.
+**Current status:** The normal research view now loads TradingView's official symbol news Web Component with `news-type="all"` and its optional daily summary. It also displays matched short RSS excerpts and direct article links from `public-news.json`. Fictional snapshots are retained only as offline fixtures and are never shown in normal research. The embedded feed is not extracted into the app's own assessment engine. A free deterministic evidence brief now groups collected headlines and excerpts into topics, provides conditional bull/bear cases and links the evidence. It does not read article bodies or infer sentiment. Public SEC Atom collection is attempted for configured tickers; full filing analysis and real quotes are not connected.
 
 ## Connected news path
 
 - Search or click a watchlist ticker: TradingView requests that exchange/symbol's news on demand. Coverage and availability remain the provider's responsibility. `show-daily-summary` requests its own summary where available; this is not a Signal Desk analyst assessment.
-- Every two hours, the Pages workflow runs `scripts/public_news.py`. It attempts the public Benzinga and Investing.com RSS feeds plus Nasdaq symbol feeds for `config.json` tickers. It indexes name/explicit-ticker matches against the entire directory. It does not download article bodies or bypass paywalls.
+- Every two hours, the Pages workflow runs `scripts/public_news.py`. It attempts the public Benzinga and Investing.com RSS feeds plus Nasdaq and Yahoo Finance symbol feeds and SEC company Atom feeds for `config.json` tickers. It indexes name/explicit-ticker matches against the entire directory. It does not download article bodies or bypass paywalls.
 - Source details show successful retrieval separately from failures. Initial live test: Benzinga returned 25 recent articles; Nasdaq requests failed; Investing.com had no usable recent items in the initial parser. A valid empty feed and a failed request are not treated as the same event.
 - All 16 requested sources are **not** connected extractors. Stocktwits is a labeled external social-discussion link; its documented API requires enterprise access. Reuters/Bloomberg and subscription research portals are not silently scraped.
-- A full on-demand extraction and synthesis service still needs a server backend and usable feed/search/analysis credentials. GitHub Pages serves files; it cannot run that service itself. API secrets must remain on the server or in Actions.
+- The deployed free brief requires no keys or paid inference. Full on-demand extraction and natural-language synthesis are not included. GitHub Pages serves files; it cannot run that service itself. API secrets must remain on the server or in Actions.
 
 The sections below describe the optional SEC/Finnhub/Benzinga API collector in addition to this public news path.
 
@@ -96,3 +96,4 @@ Before enabling a new dataset, confirm its display and redistribution rights for
 ## Tests
 
 The automated checks cover ticker/path rejection, directory lookup ordering, unsafe links, stale/future dates, syndicated-story deduplication, evidence-gated sentiment, Form 4 interpretation, security-type filtering, SEC accession links, malformed news, nonfinite metrics, and explicit collection failures. They use offline fixtures, not API credentials. Live provider access and hosted deployment require configuration and separate verification.
+
